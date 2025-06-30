@@ -1,11 +1,16 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.ollama import OllamaChatCompletionClient 
 # from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_agentchat.teams import AgentTeam
+from autogen_agentchat.teams import RoundRobinGroupChat
+# from autogen_agentchat.teams import Swarm
+# from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
+# from autogen_agentchat.messages import HandoffMessage
+# from autogen_agentchat.ui import Console
 
 from dotenv import load_dotenv
 
 import os
+import asyncio
 import arxiv
 from typing import List, Dict, AsyncGenerator
 
@@ -107,27 +112,45 @@ arxiv_researcher_agent = AssistantAgent(
     description="An agent that search, retrieves papers from arxiv.com",
     model_client=agent_LLM_Ollama,
     system_message=system_message_arxiv,
-    tools=["arxiv_search"]
+    tools=[arxiv_search]
 )
 
 # Define the agents list
-# agents = [summarizer_agents, researcher_agents]
+agents = [arxiv_researcher_agent, summarizer_agent]
 # print(arxiv_search("machine learning", 5)) # Working
-
-team = AgentTeam(
-    name="ArxivResearchTeam",
-    description="A team of agents that search and summarize papers from arxiv.com",
-    agents=[arxiv_researcher_agent, summarizer_agent],
+team = RoundRobinGroupChat(
+    participants = agents, 
+    # name="ArxivResearchTeam", 
+    # description="A team of agents that search and summarize papers from arxiv.com",
+    max_turns=2
 )
+# termination = HandoffTermination(target="user") | TextMentionTermination("TERMINATE")
+# team = Swarm([arxiv_researcher_agent, summarizer_agent], termination_condition=termination)
+# team = AgentTeam(
+#     name="ArxivResearchTeam",
+#     description="A team of agents that search and summarize papers from arxiv.com",
+#     agents=[arxiv_researcher_agent, summarizer_agent],
+# )
 
-async def team_output():
+task = "Provide a literature review on the topic of machine learning or AI Agent."
+
+async def team_output() -> AsyncGenerator[str, None]:
     """
-    Run the team and return the output.
+    Run the team and yield the output as it becomes available.
+    
+    Returns:
+        AsyncGenerator[str, None]: Yields the output of the team.
     """
-    async for output in team.run(
-        input="AI Agents",
-        max_iterations=1,
-        max_concurrent_agents=2,
-        max_concurrent_tools=2,
-    ):
+    async for output in team.run_stream(task = task):
         yield output
+
+
+
+
+if __name__ == "__main__":
+    # Run the team and print the output
+    async def main():
+        async for output in team_output():
+            print(output)
+
+    asyncio.run(main())
