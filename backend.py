@@ -1,7 +1,9 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.ollama import OllamaChatCompletionClient 
-# from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.ui import Console
+
+# from autogen_ext.models.openai import OpenAIChatCompletionClient
 # from autogen_agentchat.teams import Swarm
 # from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
 # from autogen_agentchat.messages import HandoffMessage
@@ -20,7 +22,7 @@ load_dotenv() # Load environment variables from .env file
 # pip install -U "autogen-ext[ollama]"
 # pip install -U "autogen-ext[openai]"
 
-def arxiv_search(query: str, max_results: int = 10) -> List[Dict]:
+def arxiv_search(query: str, max_results: int = 5) -> List[Dict]:
     """
     Search for papers on arXiv using the provided query.
     https://pypi.org/project/arxiv/
@@ -38,7 +40,8 @@ def arxiv_search(query: str, max_results: int = 10) -> List[Dict]:
     search = arxiv.Search(
         query=query,
         max_results=max_results,
-        sort_by=arxiv.SortCriterion.Relevance # arxiv.SortCriterion.SubmittedDate
+        # sort_by=arxiv.SortCriterion.Relevance,
+        sort_by=arxiv.SortCriterion.SubmittedDate
     )
     
     # Data Collection
@@ -51,7 +54,7 @@ def arxiv_search(query: str, max_results: int = 10) -> List[Dict]:
             "title": result.title,
             "authors": [author.name for author in result.authors],
             "summary": result.summary,
-            "published": result.published.isoformat(), # strftime("%Y-%m-%dT%H:%M:%S"),
+            "published": result.published.strftime("%Y-%m-%dT%H:%M:%S"),
             "link": result.entry_id,
             "url": result.pdf_url,
             "categories": result.categories,
@@ -72,7 +75,7 @@ system_message =(
     "Your task is to generate a concise summary that captures the main contributions and findings of each paper." \
     "Instructions:\n"
     "1. Start with 2-3 sentence introducing the topic\n" \
-    "2. Include bullet points for title, authors, problems tackled, key contributions\n" \
+    "2. Include bullet points for title, authors, problems tackled, key contributions, keywords\n" \
     "3. Title should contain paper link in Markdown format\n" \
     "4. Use clear and concise language, avoiding jargon\n" \
     )
@@ -87,8 +90,8 @@ system_message =(
 # )
 
 agent_LLM_Ollama = OllamaChatCompletionClient( # On Private Server
-    model="qwen2.5-coder",
-    base_url="http://localhost:11434/v1",  # Adjust the base URL as needed
+    model="llama3.2:latest",
+    base_url="http://localhost:11434/api/generate",  # Adjust the base URL as needed
     model_info={
         "vision": False,
         "function_calling": True,
@@ -117,20 +120,10 @@ arxiv_researcher_agent = AssistantAgent(
 
 # Define the agents list
 agents = [arxiv_researcher_agent, summarizer_agent]
-# print(arxiv_search("machine learning", 5)) # Working
 team = RoundRobinGroupChat(
     participants = agents, 
-    # name="ArxivResearchTeam", 
-    # description="A team of agents that search and summarize papers from arxiv.com",
-    max_turns=2
+    max_turns=2,
 )
-# termination = HandoffTermination(target="user") | TextMentionTermination("TERMINATE")
-# team = Swarm([arxiv_researcher_agent, summarizer_agent], termination_condition=termination)
-# team = AgentTeam(
-#     name="ArxivResearchTeam",
-#     description="A team of agents that search and summarize papers from arxiv.com",
-#     agents=[arxiv_researcher_agent, summarizer_agent],
-# )
 
 task = "Provide a literature review on the topic of machine learning or AI Agent."
 
@@ -142,15 +135,37 @@ async def team_output() -> AsyncGenerator[str, None]:
         AsyncGenerator[str, None]: Yields the output of the team.
     """
     async for output in team.run_stream(task = task):
-        yield output
+        yield output.
 
 
+async def main():
+    """
+    Main function to run the team and print the output.
+    """
+    async for output in team_output():
+        print(output)
+        # with open("team_output.md", "a") as f:
+        #     print(output, file=f)
+        # print(output)   
+
+
+def test_arxiv_search():
+    print("Testing arxiv search function...")
+    results = arxiv_search("machine learning", max_results=5)
+    if results:
+        with open("arxiv_results.json", "w") as f:
+            import json
+            json.dump(results, f, indent=4) 
+    else:
+        print("No results found from Arxiv.")
+    print("Arxiv search function is working correctly.")
 
 
 if __name__ == "__main__":
-    # Run the team and print the output
-    async def main():
-        async for output in team_output():
-            print(output)
+    # Test the arxiv search function
+    # test_arxiv_search()
 
+    # Run the team and print the output
+
+    print("Running the team...")
     asyncio.run(main())
