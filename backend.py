@@ -1,13 +1,8 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.ollama import OllamaChatCompletionClient 
 from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.base import TaskResult
 from autogen_agentchat.ui import Console
-
-# from autogen_ext.models.openai import OpenAIChatCompletionClient
-# from autogen_agentchat.teams import Swarm
-# from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
-# from autogen_agentchat.messages import HandoffMessage
-# from autogen_agentchat.ui import Console
 
 from dotenv import load_dotenv
 
@@ -18,9 +13,6 @@ from typing import List, Dict, AsyncGenerator
 
 load_dotenv() # Load environment variables from .env file
 
-# Librariies
-# pip install -U "autogen-ext[ollama]"
-# pip install -U "autogen-ext[openai]"
 
 def arxiv_search(query: str, max_results: int = 5) -> List[Dict]:
     """
@@ -69,16 +61,21 @@ system_message_arxiv = (
     "When the tool returns the results, summarize each paper in a concise JSON manner."
 )
 
-system_message =(
-    "You are an expert researcher."
-    "You will write a literature review report in Markdown format, based on the JSON list of papers provided."
-    "Your task is to generate a concise summary that captures the main contributions and findings of each paper." \
-    "Instructions:\n"
-    "1. Start with 2-3 sentence introducing the topic\n" \
-    "2. Include bullet points for title, authors, problems tackled, key contributions, keywords\n" \
-    "3. Title should contain paper link in Markdown format\n" \
-    "4. Use clear and concise language, avoiding jargon\n" \
-    )
+system_message = (
+    "You are a seasoned research analyst with expertise in literature reviews.\n\n"
+    "Your mission is to produce a literature review report in Markdown format, based on the provided JSON list of papers. "
+    "Focus on crafting a succinct summary that highlights each paper's core contributions and findings.\n\n"
+    "Please follow these guidelines:\n"
+    "1. Begin with a 2-3 sentence introduction that frames the topic and its relevance.\n"
+    "2. For each paper, include bullet points covering:\n"
+    "   - **Title** (with a Markdown-formatted link to the paper)\n"
+    "   - **Authors**\n"
+    "   - **Research problem(s)** addressed\n"
+    "   - **Key contributions**\n"
+    "   - **Keywords**\n"
+    "3. Use clear, concise language—avoid unnecessary jargon and ensure readability.\n"
+)
+
 
 # agent_LLM_OpenAI = OpenAIChatCompletionClient( # On OpenAI API
 #     api_key = os.getenv("OPENAI_API_KEY"),
@@ -125,7 +122,7 @@ team = RoundRobinGroupChat(
     max_turns=2,
 )
 
-task = "Provide a literature review on the topic of machine learning or AI Agent."
+task = "Provide a literature review on the topic related to AI Agent and Machine Learning."
 
 async def team_output() -> AsyncGenerator[str, None]:
     """
@@ -137,21 +134,27 @@ async def team_output() -> AsyncGenerator[str, None]:
     async for output in team.run_stream(task = task):
         yield output
 
-
 async def main():
     """
     Main function to run the team and print the output.
     """
-    # Run the team and stream messages to the console
+    # Output 1
+    import aiofiles
+
+    result: TaskResult = await team.run(task=task)
+    final_review = result.messages[-1].content
+    async with aiofiles.open("team_output_final.md", "w") as f:
+        await f.write(final_review)
+
+    # Output 2: Console output
     stream = team.run_stream(task=task)
     await Console(stream)
-    # Close the browser controlled by the agent
 
-    # async for output in team_output():
-    #     print(output)
-        # with open("team_output.md", "a") as f:
-        #     print(output, file=f)
-        # print(output)   
+
+    # Output 3: Async generator output
+    async for output in team_output():
+        with open("team_output.md", "w") as f:
+            print(output, file=f)
 
 
 def test_arxiv_search():
