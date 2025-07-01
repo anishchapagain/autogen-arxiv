@@ -1,11 +1,9 @@
 # AutoGen with Ollama (free LLMs)
 This project use multiple AI agents (multi-agent) working collectively to extract data from Arxiz.com and preparing a literature review type of MarkDown document.
-Final document is ready to be shared in blog and articles.
+Final document is ready to be shared in blog and articles that support markdown format.
 
-1. Researcher Agent
-- Collects raw data from arxiv
-2. Summarizer Agent
-- Summarizes the collected content based on prompt and returns the output.
+1. Researcher Agent: Collects raw data from arxiv.
+2. Summarizer Agent: Summarizes the collected content based on prompt and returns the output.
 
 Output is collected and shared found from ```Console```, ```team.run```, and ```team.run_stream```.
 
@@ -101,6 +99,6 @@ Each of these papers contributes significantly to the field of AI agents and mac
 
 ### Want to learn more about multi-agent?
 There are various frameworks available, trying few of them.
-- [What is a Multiagent System? | IBM] (https://www.ibm.com/think/topics/multiagent-system)
-- [What are multi-agent systems? | SAP] (https://www.sap.com/bulgaria/resources/what-are-multi-agent-systems)
-- [Multi agent system - HuggingFace.co] (https://huggingface.co/learn/agents-course/unit2/smolagents/multi_agent_systems)
+- [What is a Multiagent System? | IBM](https://www.ibm.com/think/topics/multiagent-system)
+- [What are multi-agent systems? | SAP](https://www.sap.com/bulgaria/resources/what-are-multi-agent-systems)
+- [Multi agent system - HuggingFace.co](https://huggingface.co/learn/agents-course/unit2/smolagents/multi_agent_systems)
