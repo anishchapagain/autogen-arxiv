@@ -135,15 +135,20 @@ async def team_output() -> AsyncGenerator[str, None]:
         AsyncGenerator[str, None]: Yields the output of the team.
     """
     async for output in team.run_stream(task = task):
-        yield output.
+        yield output
 
 
 async def main():
     """
     Main function to run the team and print the output.
     """
-    async for output in team_output():
-        print(output)
+    # Run the team and stream messages to the console
+    stream = team.run_stream(task=task)
+    await Console(stream)
+    # Close the browser controlled by the agent
+
+    # async for output in team_output():
+    #     print(output)
         # with open("team_output.md", "a") as f:
         #     print(output, file=f)
         # print(output)   
