@@ -108,7 +108,7 @@ summarizer_agent = AssistantAgent(
 
 # Define the researcher agent using python library ```arxiv```
 arxiv_researcher_agent = AssistantAgent(
-    name="Arxiv_ResearcherAgent",
+    name="Arxiv ResearcherAgent",
     description="An agent that search, retrieves papers from arxiv.com",
     model_client=agent_LLM_Ollama,
     system_message=system_message_arxiv,
