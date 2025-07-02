@@ -157,20 +157,20 @@ async def main():
     # Output 1
     import aiofiles
 
-    # result: TaskResult = await team.run(task=task)
-    # final_review = result.messages[-1].content
-    # async with aiofiles.open("team_output_final.md", "w") as f:
-    #     await f.write(final_review)
+    result: TaskResult = await team.run(task=task)
+    final_review = result.messages[-1].content
+    async with aiofiles.open("team_output_final.md", "w") as f:
+        await f.write(final_review)
 
     # Output 2: Console output
     stream = team.run_stream(task=task)
     await Console(stream)
 
 
-    # # Output 3: Async generator output
-    # async for output in team_output():
-    #     with open("team_output.md", "w") as f:
-    #         print(output, file=f)
+    # Output 3: Async generator output
+    async for output in team_output():
+        with open("team_output.md", "w") as f:
+            print(output, file=f)
 
 
 def test_arxiv_search():
