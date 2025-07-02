@@ -65,7 +65,6 @@ system_message_arxiv = (
     "Given a user topic, think of the best arxiv query and call the provided tool."
     "Always search five times the papers related to the topic."
     "When the tool returns the results, summarize each paper in a concise JSON manner."
-    "Do not create any content by yourself, just return the JSON list of papers."
 )
 
 system_message = (
