@@ -2,6 +2,7 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.ollama import OllamaChatCompletionClient 
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.base import TaskResult
+from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
 from autogen_agentchat.ui import Console
 
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ from typing import List, Dict, AsyncGenerator
 
 load_dotenv() # Load environment variables from .env file
 
+MAX_LIMIT = 10
 
 def arxiv_search(query: str, max_results: int = 5) -> List[Dict]:
     """
@@ -28,6 +30,10 @@ def arxiv_search(query: str, max_results: int = 5) -> List[Dict]:
     """
     # Construct the default API client.
     client = arxiv.Client()
+
+    if max_results > MAX_LIMIT:
+        print(f"Warning: Maximum results limit is {MAX_LIMIT}. Setting max_results {max_results} to {MAX_LIMIT}.")
+        max_results = MAX_LIMIT
 
     search = arxiv.Search(
         query=query,
@@ -57,8 +63,9 @@ def arxiv_search(query: str, max_results: int = 5) -> List[Dict]:
 # Define the system message for the summarizer agent
 system_message_arxiv = (
     "Given a user topic, think of the best arxiv query and call the provided tool."
-    "Always getch five times the papers related to the topic."
+    "Always search five times the papers related to the topic."
     "When the tool returns the results, summarize each paper in a concise JSON manner."
+    "Do not create any content by yourself, just return the JSON list of papers."
 )
 
 system_message = (
@@ -72,8 +79,11 @@ system_message = (
     "   - **Authors**\n"
     "   - **Research problem(s)** addressed\n"
     "   - **Key contributions**\n"
+    "   - **Published date**\n"
     "   - **Keywords**\n"
+    "   - **Categories**\n"
     "3. Use clear, concise language—avoid unnecessary jargon and ensure readability.\n"
+    "Respond with 'APPROVE' when your analysis is completed."
 )
 
 
@@ -108,21 +118,28 @@ summarizer_agent = AssistantAgent(
 
 # Define the researcher agent using python library ```arxiv```
 arxiv_researcher_agent = AssistantAgent(
-    name="Arxiv ResearcherAgent",
+    name="ArxivResearcherAgent",
     description="An agent that search, retrieves papers from arxiv.com",
     model_client=agent_LLM_Ollama,
     system_message=system_message_arxiv,
     tools=[arxiv_search]
 )
 
+# Termination Condition added
+max_msg_termination = MaxMessageTermination(max_messages=3)
+text_termination = TextMentionTermination("APPROVE")
+combined_termination = max_msg_termination | text_termination
+
 # Define the agents list
 agents = [arxiv_researcher_agent, summarizer_agent]
 team = RoundRobinGroupChat(
     participants = agents, 
-    max_turns=2,
+    # max_turns=2,
+    termination_condition=combined_termination
 )
 
 task = "Provide a literature review on the topic related to AI Agent and Machine Learning."
+task = "Write a literature review on the topic related to Biology"
 
 async def team_output() -> AsyncGenerator[str, None]:
     """
@@ -141,20 +158,20 @@ async def main():
     # Output 1
     import aiofiles
 
-    result: TaskResult = await team.run(task=task)
-    final_review = result.messages[-1].content
-    async with aiofiles.open("team_output_final.md", "w") as f:
-        await f.write(final_review)
+    # result: TaskResult = await team.run(task=task)
+    # final_review = result.messages[-1].content
+    # async with aiofiles.open("team_output_final.md", "w") as f:
+    #     await f.write(final_review)
 
     # Output 2: Console output
     stream = team.run_stream(task=task)
     await Console(stream)
 
 
-    # Output 3: Async generator output
-    async for output in team_output():
-        with open("team_output.md", "w") as f:
-            print(output, file=f)
+    # # Output 3: Async generator output
+    # async for output in team_output():
+    #     with open("team_output.md", "w") as f:
+    #         print(output, file=f)
 
 
 def test_arxiv_search():
